@@ -34,11 +34,25 @@ func (tools *Tools) RandomString(length int) string {
 // UploadedFile is a struct used to save information about an uploaded file
 type UploadedFile struct {
 	NewFileName      string
-	OriginalFilename string
+	OriginalFileName string
 	FileSize         int64
 }
 
-func (tools *Tools) UploadFile(r *http.Request, uploadDir string, rename ...bool) ([]*UploadedFile, error) {
+// UploadOneFile upload one file in specific directory
+func (tools *Tools) UploadOneFile(r *http.Request, uploadDir string, rename ...bool) (*UploadedFile, error) {
+	renameFile := true
+	if len(rename) > 0 {
+		renameFile = rename[0]
+	}
+	files, err := tools.UploadFiles(r, uploadDir, renameFile)
+	if err != nil {
+		return nil, err
+	}
+	return files[0], nil
+}
+
+// UploadFiles upload multiple files in specific directory
+func (tools *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) ([]*UploadedFile, error) {
 	renameFile := true
 	if len(rename) > 0 {
 		renameFile = rename[0]
@@ -53,7 +67,7 @@ func (tools *Tools) UploadFile(r *http.Request, uploadDir string, rename ...bool
 	}
 	for _, fHeaders := range r.MultipartForm.File {
 		for _, hdr := range fHeaders {
-			uploadedFiles, err := func(uploadedFiles []*UploadedFile) ([]*UploadedFile, error) {
+			uploadedFiles, err = func(uploadedFiles []*UploadedFile) ([]*UploadedFile, error) {
 				var uploadedFile UploadedFile
 				infile, err := hdr.Open()
 				if err != nil {
@@ -93,6 +107,7 @@ func (tools *Tools) UploadFile(r *http.Request, uploadDir string, rename ...bool
 				} else {
 					uploadedFile.NewFileName = hdr.Filename
 				}
+				uploadedFile.OriginalFileName = hdr.Filename
 				var outfile *os.File
 				defer outfile.Close()
 				if outfile, err = os.Create(filepath.Join(uploadDir, uploadedFile.NewFileName)); err != nil {
