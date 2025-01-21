@@ -40,7 +40,9 @@ func TestTools_UploadFiles(t *testing.T) {
 		wg := new(sync.WaitGroup)
 		wg.Add(1)
 		go func() {
-			defer writer.Close()
+			defer func(writer *multipart.Writer) {
+				_ = writer.Close()
+			}(writer)
 			defer wg.Done()
 			/// Create the form data field "file"
 			part, err := writer.CreateFormFile("file", "./testdata/img.png")
@@ -51,7 +53,9 @@ func TestTools_UploadFiles(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			defer file.Close()
+			defer func(file *os.File) {
+				_ = file.Close()
+			}(file)
 			img, _, err := image.Decode(file)
 			if err != nil {
 				t.Error("error decoding image", err)
@@ -98,7 +102,9 @@ func TestTools_UploadOneFile(t *testing.T) {
 	writer := multipart.NewWriter(pw)
 
 	go func() {
-		defer writer.Close()
+		defer func(writer *multipart.Writer) {
+			_ = writer.Close()
+		}(writer)
 		/// Create the form data field "file"
 		part, err := writer.CreateFormFile("file", "./testdata/img.png")
 		if err != nil {
@@ -108,7 +114,9 @@ func TestTools_UploadOneFile(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		defer file.Close()
+		defer func(file *os.File) {
+			_ = file.Close()
+		}(file)
 		img, _, err := image.Decode(file)
 		if err != nil {
 			t.Error("error decoding image", err)
@@ -139,5 +147,22 @@ func TestTools_UploadOneFile(t *testing.T) {
 				break
 			}
 		}
+	})
+}
+
+func TestTools_CreateDirIfNotExist(t *testing.T) {
+	var testTool Tools
+	err := testTool.CreateDirIfNotExist("./testdata/myDir")
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = testTool.CreateDirIfNotExist("./testdata/myDir")
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Cleanup(func() {
+		_ = os.RemoveAll("./testdata/myDir")
 	})
 }

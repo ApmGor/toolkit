@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -61,7 +62,11 @@ func (tools *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...boo
 	if tools.MaxFileSize == 0 {
 		tools.MaxFileSize = 1 << 30
 	}
-	err := r.ParseMultipartForm(int64(tools.MaxFileSize))
+	err := tools.CreateDirIfNotExist(uploadDir)
+	if err != nil {
+		return nil, err
+	}
+	err = r.ParseMultipartForm(int64(tools.MaxFileSize))
 	if err != nil {
 		return nil, errors.New("the uploaded file is too big")
 	}
@@ -73,7 +78,9 @@ func (tools *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...boo
 				if err != nil {
 					return nil, err
 				}
-				defer infile.Close()
+				defer func(infile multipart.File) {
+					_ = infile.Close()
+				}(infile)
 				buff := make([]byte, 512)
 				_, err = infile.Read(buff)
 				if err != nil {
@@ -109,7 +116,9 @@ func (tools *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...boo
 				}
 				uploadedFile.OriginalFileName = hdr.Filename
 				var outfile *os.File
-				defer outfile.Close()
+				defer func(outfile *os.File) {
+					_ = outfile.Close()
+				}(outfile)
 				if outfile, err = os.Create(filepath.Join(uploadDir, uploadedFile.NewFileName)); err != nil {
 					return nil, err
 				} else {
@@ -128,4 +137,16 @@ func (tools *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...boo
 		}
 	}
 	return uploadedFiles, nil
+}
+
+// CreateDirIfNotExist creates a directory, and all necessary parents, if it does not exist
+func (tools *Tools) CreateDirIfNotExist(path string) error {
+	const mode = 0755
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err = os.MkdirAll(path, os.FileMode(mode))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
