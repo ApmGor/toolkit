@@ -164,3 +164,10 @@ func (tools *Tools) Slugify(s string) (string, error) {
 	}
 	return slug, nil
 }
+
+// DownloadStaticFile downloads a file
+func (tools *Tools) DownloadStaticFile(w http.ResponseWriter, r *http.Request, p, file, displayName string) {
+	fp := filepath.Join(p, file)
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+displayName+"\"")
+	http.ServeFile(w, r, fp)
+}

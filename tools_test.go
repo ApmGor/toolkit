@@ -197,3 +197,24 @@ func TestTools_Slugify(t *testing.T) {
 		}
 	}
 }
+
+func TestTools_DownloadStaticFile(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	var testTool Tools
+	testTool.DownloadStaticFile(w, r, "./testdata", "pic.jpg", "puppy.jpg")
+	res := w.Result()
+	if res.Header["Content-Length"][0] != "98827" {
+		t.Errorf("wrong Content-Length of %s", res.Header["Content-Length"][0])
+	}
+	if res.Header["Content-Disposition"][0] != "attachment; filename=\"puppy.jpg\"" {
+		t.Error("wrong Content-Disposition")
+	}
+	_, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Cleanup(func() {
+		_ = res.Body.Close()
+	})
+}
