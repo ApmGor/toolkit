@@ -16,4 +16,4 @@ The included tools are:
 
 ## Installation
 
-`go get -u github.com/ApmGor/toolkit`
+`go get -u github.com/ApmGor/toolkit/v2`
